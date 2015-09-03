@@ -32,9 +32,9 @@ public class MainActivity extends Activity {
         setContentView(R.layout.activity_main);
 
         db = TodoItemDatabaseHelper.getInstance(this);
-        lvItems = (ListView) findViewById(R.id.lvItems);
         items = db.getAllTodoItems();
-        itemsAdapter = new ArrayAdapter<>(this, android.R.layout.simple_list_item_1, items);
+        itemsAdapter = new TodoItemAdapter(this, items);
+        lvItems = (ListView) findViewById(R.id.lvItems);
         lvItems.setAdapter(itemsAdapter);
         setupListViewListeners();
     }

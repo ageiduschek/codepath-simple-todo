@@ -7,9 +7,9 @@ public class TodoItem {
     public long id;
     public String text;
 
-    public TodoItem(long _id, String _text) {
-        id = _id;
-        text = _text;
+    public TodoItem(long id, String text) {
+        this.id = id;
+        this.text = text;
     }
 
     public String toString() {
