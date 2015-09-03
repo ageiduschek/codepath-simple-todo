@@ -11,44 +11,40 @@ import android.widget.ArrayAdapter;
 import android.widget.EditText;
 import android.widget.ListView;
 
-import org.apache.commons.io.FileUtils;
-
-import java.io.File;
-import java.io.IOException;
 import java.util.ArrayList;
 
 
 public class MainActivity extends Activity {
     private static final int EDIT_REQUEST_CODE = 31415;
-    private static final String TODO_FILE_NAME = "todo.txt";
 
     public static final String LIST_ITEM_TEXT_EXTRA = "list_item_text";
     public static final String LIST_ITEM_INDEX_EXTRA = "list_item_index";
 
 
-    private ArrayList<String> items;
-    private ArrayAdapter<String> itemsAdapter;
+    private ArrayList<TodoItem> items;
+    private ArrayAdapter<TodoItem> itemsAdapter;
     private ListView lvItems;
+    private TodoItemDatabaseHelper db;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
 
+        db = TodoItemDatabaseHelper.getInstance(this);
         lvItems = (ListView) findViewById(R.id.lvItems);
-        readItems();
-        itemsAdapter = new ArrayAdapter<String>(this, android.R.layout.simple_list_item_1, items);
+        items = db.getAllTodoItems();
+        itemsAdapter = new ArrayAdapter<>(this, android.R.layout.simple_list_item_1, items);
         lvItems.setAdapter(itemsAdapter);
-
         setupListViewListeners();
     }
 
     public void onAddItem(View view) {
         EditText etNewItem = (EditText) findViewById(R.id.etNewItem);
         String itemText = etNewItem.getText().toString();
-        itemsAdapter.add(itemText);
+        TodoItem item = db.addTodoItem(itemText);
+        itemsAdapter.add(item);
         etNewItem.setText("");
-        writeItems();
     }
 
     private void setupListViewListeners() {
@@ -64,9 +60,9 @@ public class MainActivity extends Activity {
         lvItems.setOnItemLongClickListener(new AdapterView.OnItemLongClickListener() {
             @Override
             public boolean onItemLongClick(AdapterView<?> adapterView, View item, int pos, long id) {
-                items.remove(pos);
+                TodoItem todoItem = items.remove(pos);
+                db.deleteTodoItem(todoItem);
                 itemsAdapter.notifyDataSetChanged();
-                writeItems();
                 return true;
             }
         });
@@ -75,40 +71,17 @@ public class MainActivity extends Activity {
     @Override
     protected void onActivityResult(int requestCode, int resultCode, Intent data) {
         if (resultCode == RESULT_OK && requestCode == EDIT_REQUEST_CODE) {
-            String todoText = data.getExtras().getString(LIST_ITEM_TEXT_EXTRA);
+            String newText = data.getExtras().getString(LIST_ITEM_TEXT_EXTRA);
             int index = data.getExtras().getInt(LIST_ITEM_INDEX_EXTRA, -1);
-            items.set(index, todoText);
+            TodoItem updatedItem = db.editTodoItem(items.get(index), newText);
+            items.set(index, updatedItem);
             itemsAdapter.notifyDataSetChanged();
-            writeItems();
-        }
-    }
-
-
-    private void readItems() {
-        File filesDir = getFilesDir();
-        File todoFile = new File(filesDir, TODO_FILE_NAME);
-        try {
-            items = new ArrayList<String>(FileUtils.readLines(todoFile));
-        } catch (IOException e) {
-            items = new ArrayList<>();
-            items.add("First item");
-            items.add("Second item");
-        }
-    }
-    private void writeItems() {
-        File filesDir = getFilesDir();
-        File todoFile = new File(filesDir, TODO_FILE_NAME);
-
-        try {
-            FileUtils.writeLines(todoFile, items);
-        } catch (IOException e) {
-            e.printStackTrace();
         }
     }
 
     public void launchEditorView(int itemIndex) {
         Intent i = new Intent(MainActivity.this, EditItemActivity.class);
-        i.putExtra(LIST_ITEM_TEXT_EXTRA, items.get(itemIndex));
+        i.putExtra(LIST_ITEM_TEXT_EXTRA, items.get(itemIndex).text);
         i.putExtra(LIST_ITEM_INDEX_EXTRA, itemIndex);
         startActivityForResult(i, EDIT_REQUEST_CODE);
     }
